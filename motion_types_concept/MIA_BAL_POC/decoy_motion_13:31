@@ -1,0 +1,32 @@
+import pandas as pd
+
+# Set display options for pandas
+pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', None)
+pd.set_option('display.width', None)
+pd.set_option('display.max_colwidth', 50)  # Set to 50 to make sure the column isn't too wide
+pd.set_option('display.float_format', '{:.2f}'.format)
+
+# Load datasets
+games = pd.read_csv('games.csv')
+plays = pd.read_csv('plays.csv')
+player_play = pd.read_csv('player_play.csv')
+
+# Select specific columns for the 'plays' dataframe where playId = 141
+plays_columns = [
+    "gameId", "playId", "playDescription", "quarter", "down", "yardsToGo",
+    "possessionTeam", "defensiveTeam", "yardlineSide", "yardlineNumber", "gameClock"
+]
+print("\nRows with playId = 141 and gameId = 3899 in 'plays' dataframe:")
+print(plays[(plays['playId'] == 141) & (plays['possessionTeam'] == 'MIA')][plays_columns])
+
+# Select specific columns for the 'player_play' dataframe where playId = 141
+player_play_columns = [
+     "playId", "nflId", "teamAbbr",
+     "passingYards", "hadPassReception",
+    "receivingYards", "wasTargettedReceiver", "yardageGainedAfterTheCatch",
+    "inMotionAtBallSnap", "shiftSinceLineset", "motionSinceLineset", "wasRunningRoute","hadPassReception"
+
+]
+print("\nRows with playId = 141 and gameId = 3899 in 'player_play' dataframe:")
+print(player_play[(player_play['playId'] == 141) & (player_play['teamAbbr'] == 'MIA')][player_play_columns])
