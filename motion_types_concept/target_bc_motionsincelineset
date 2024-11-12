@@ -1,0 +1,51 @@
+import pandas as pd
+
+# Set display options for pandas
+pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', None)
+pd.set_option('display.width', None)
+pd.set_option('display.max_colwidth', 50)  # Set to 50 to make sure the column isn't too wide
+pd.set_option('display.float_format', '{:.2f}'.format)
+
+# Load datasets
+games = pd.read_csv('games.csv')
+plays = pd.read_csv('plays.csv')
+player_play = pd.read_csv('player_play.csv')
+
+# Select specific columns for the 'plays' dataframe where playId = 141
+plays_columns = [
+    "gameId", "playId", "playDescription", "quarter", "down", "yardsToGo",
+    "possessionTeam", "defensiveTeam", "yardlineSide", "yardlineNumber", "gameClock"
+]
+# Create unique identifier by combining gameId and playId
+player_play['unique_play'] = player_play['gameId'].astype(str) + "_" + player_play['playId'].astype(str)
+
+# Get the total number of unique plays where motion is True
+total_motion_count = player_play[player_play['motionSinceLineset'] == True]['unique_play'].nunique()
+
+# Step 1: Plays where motion is True & wasTargettedReceiver = 1 (targeted receiver in motion)
+motion_and_target_plays = player_play.groupby('unique_play').apply(
+    lambda x: any(x['motionSinceLineset'] == True) and any(x['wasTargettedReceiver'] == 1)
+).sum()
+
+# Step 2: Remaining plays where motion is True & hadRushAttempt = 1 (rusher in motion)
+motion_and_rush_plays = player_play.groupby('unique_play').apply(
+    lambda x: any(x['motionSinceLineset'] == True) and any(x['hadRushAttempt'] == 1) and
+    not any(x['wasTargettedReceiver'] == 1)
+).sum()
+
+# Step 3: Remaining plays where motion is True, no rush attempt, and not targeted (decoy in motion)
+motion_no_rush_no_target_plays = player_play.groupby('unique_play').apply(
+    lambda x: any(x['motionSinceLineset'] == True) and any(x['hadRushAttempt'] == 0) and any(x['wasTargettedReceiver'] == 0) and
+    not any(x['wasTargettedReceiver'] == 1) and not any(x['hadRushAttempt'] == 1)
+).sum()
+
+# Verify the sum of all categories matches the total_motion_count
+total_calculated_count = motion_and_target_plays + motion_and_rush_plays + motion_no_rush_no_target_plays
+
+# Display results
+print("Total unique plays where motion is True:", total_motion_count)
+print("Unique plays where motion is True & targeted receiver (targeted receiver in motion):", motion_and_target_plays)
+print("Unique plays where motion is True & rush attempt (rusher in motion):", motion_and_rush_plays)
+print("Unique plays where motion is True, no rush attempt, and not targeted (decoy in motion):", motion_no_rush_no_target_plays)
+print("Sum of all categories:", total_calculated_count)
