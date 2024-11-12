@@ -1,0 +1,45 @@
+import pandas as pd
+
+# Set display options for pandas
+pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', None)
+pd.set_option('display.width', None)
+pd.set_option('display.max_colwidth', None)
+pd.set_option('display.float_format', '{:.2f}'.format)
+
+# Load datasets
+games = pd.read_csv('games.csv')
+plays = pd.read_csv('plays.csv')
+players = pd.read_csv('players.csv')
+player_play = pd.read_csv('player_play.csv')
+
+
+# Select specific columns for the 'plays' dataframe
+plays_columns = [
+    "gameId", "playId", "playDescription", "quarter", "down", "yardsToGo",
+    "possessionTeam", "defensiveTeam", "yardlineSide", "yardlineNumber", "gameClock"
+]
+
+# Select specific columns for the 'player_play' dataframe
+player_play_columns = [
+    "playId", "nflId", "teamAbbr",
+    "passingYards", "hadPassReception",
+    "receivingYards", "wasTargettedReceiver", "yardageGainedAfterTheCatch",
+    "inMotionAtBallSnap", "shiftSinceLineset", "motionSinceLineset", "wasRunningRoute", "hadPassReception"
+]
+# Total unique play IDs in the entire dataset
+total_play_count = player_play['playId'].nunique()
+
+# Unique play IDs where motion is True and player had a rush attempt
+motion_and_rush_count = player_play[
+    (player_play['motionSinceLineset'] == True) &
+    (player_play['hadRushAttempt'] == 1)
+]['playId'].nunique()
+
+# Calculate percentage
+percentage_motion_rush = (motion_and_rush_count / total_play_count) * 100
+
+# Display results
+print("Total unique play IDs in dataset:", total_play_count)
+print("Unique play IDs where motion is True and player had a rush attempt:", motion_and_rush_count)
+print("Percentage of plays where player went in motion and had a rush attempt:", percentage_motion_rush)
