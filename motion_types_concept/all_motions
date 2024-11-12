@@ -1,0 +1,67 @@
+import pandas as pd
+
+# Set display options for pandas
+pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', None)
+pd.set_option('display.width', None)
+pd.set_option('display.max_colwidth', 50)  # Set to 50 to make sure the column isn't too wide
+pd.set_option('display.float_format', '{:.2f}'.format)
+
+# Load datasets
+games = pd.read_csv('games.csv')
+plays = pd.read_csv('plays.csv')
+player_play = pd.read_csv('player_play.csv')
+
+# Select specific columns for the 'plays' dataframe where playId = 141
+plays_columns = [
+    "gameId", "playId", "playDescription", "quarter", "down", "yardsToGo",
+    "possessionTeam", "defensiveTeam", "yardlineSide", "yardlineNumber", "gameClock"
+]
+# Add unique identifier for each play by combining gameId and playId
+player_play['unique_play'] = player_play['gameId'].astype(str) + "_" + player_play['playId'].astype(str)
+
+# Calculate total unique plays for each motion type
+total_inMotionAtBallSnap = player_play[player_play['inMotionAtBallSnap'] == True]['unique_play'].nunique()
+total_shiftSinceLineset = player_play[player_play['shiftSinceLineset'] == True]['unique_play'].nunique()
+total_motionSinceLineset = player_play[player_play['motionSinceLineset'] == True]['unique_play'].nunique()
+
+# Define a function to count unique plays based on conditions
+def count_unique_plays(motion_column, target_column, rush_column):
+    # Plays where motion is True & targeted receiver
+    motion_and_target_plays = player_play.groupby('unique_play').apply(
+        lambda x: any(x[motion_column] == True) and any(x[target_column] == 1)
+    ).sum()
+
+    # Plays where motion is True & rush attempt
+    motion_and_rush_plays = player_play.groupby('unique_play').apply(
+        lambda x: any(x[motion_column] == True) and any(x[rush_column] == 1) and not any(x[target_column] == 1)
+    ).sum()
+
+    # Plays where motion is True, no rush attempt, and not targeted
+    motion_no_rush_no_target_plays = player_play.groupby('unique_play').apply(
+        lambda x: any(x[motion_column] == True) and any(x[rush_column] == 0) and any(x[target_column] == 0) and
+        not any(x[target_column] == 1) and not any(x[rush_column] == 1)
+    ).sum()
+
+    return motion_and_target_plays, motion_and_rush_plays, motion_no_rush_no_target_plays
+
+# For each motion type, get counts of plays that match each condition
+# `target_column` = 'wasTargettedReceiver', `rush_column` = 'hadRushAttempt'
+motion_types = ['inMotionAtBallSnap', 'shiftSinceLineset', 'motionSinceLineset']
+results = {}
+
+for motion in motion_types:
+    target_plays, rush_plays, decoy_plays = count_unique_plays(motion, 'wasTargettedReceiver', 'hadRushAttempt')
+    results[motion] = {
+        'Total unique plays with this motion': player_play[player_play[motion] == True]['unique_play'].nunique(),
+        'Plays where motion player was targeted receiver': target_plays,
+        'Plays where motion player was rusher': rush_plays,
+        'Plays where motion player was a decoy': decoy_plays,
+        'Sum of all categories': target_plays + rush_plays + decoy_plays
+    }
+
+# Display the results for each motion type
+for motion_type, data in results.items():
+    print(f"\nResults for motion type: {motion_type}")
+    for key, value in data.items():
+        print(f"{key}: {value}")
