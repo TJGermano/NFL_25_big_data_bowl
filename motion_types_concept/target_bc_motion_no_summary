@@ -1,0 +1,85 @@
+import pandas as pd
+
+# Set display options for pandas
+pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', None)
+pd.set_option('display.width', None)
+pd.set_option('display.max_colwidth', 50)  # Set to 50 to make sure the column isn't too wide
+pd.set_option('display.float_format', '{:.2f}'.format)
+
+# Load datasets
+games = pd.read_csv('../games.csv')
+plays = pd.read_csv('../plays.csv')
+player_play = pd.read_csv('../player_play.csv')
+# Add unique identifier for each play by combining gameId and playId
+player_play['unique_play'] = player_play['gameId'].astype(str) + "_" + player_play['playId'].astype(str)
+
+# Combine all motion columns into one for overall motion status (any motion column is true)
+player_play['has_motion'] = (
+        player_play['inMotionAtBallSnap'] |
+        player_play['shiftSinceLineset'] |
+        player_play['motionSinceLineset']
+)
+
+# Define a function to count unique plays without double-counting categories
+def count_unique_plays(motion_column, target_column, rush_column):
+    # Plays where the motioning player is the targeted receiver
+    motion_and_target_plays = player_play.groupby('unique_play').apply(
+        lambda x: any((x[motion_column] == True) & (x[target_column] == 1))
+    )
+
+    # Plays where the motioning player is the rusher
+    motion_and_rush_plays = player_play.groupby('unique_play').apply(
+        lambda x: any((x[motion_column] == True) & (x[rush_column] == 1) & (x[target_column] == 0))
+    )
+
+    # Plays where the motioning player is neither the rusher nor the target (decoy)
+    motion_decoy_plays = player_play.groupby('unique_play').apply(
+        lambda x: any((x[motion_column] == True) & (x[target_column] == 0) & (x[rush_column] == 0))
+    )
+
+    # Convert to integers for summing
+    motion_and_target_plays = motion_and_target_plays.astype(int)
+    motion_and_rush_plays = motion_and_rush_plays.astype(int)
+    motion_decoy_plays = motion_decoy_plays.astype(int)
+
+    # Calculate individual counts
+    target_count = motion_and_target_plays.sum()
+    rush_count = motion_and_rush_plays.sum()
+    decoy_count = motion_decoy_plays.sum()
+
+    # Avoid double-counting by calculating the union of unique plays across categories
+    unique_play_sum = (motion_and_target_plays | motion_and_rush_plays | motion_decoy_plays).sum()
+
+    return target_count, rush_count, decoy_count, unique_play_sum
+
+
+# For each motion type, get counts of plays that match each condition
+motion_types = ['inMotionAtBallSnap', 'shiftSinceLineset', 'motionSinceLineset']
+results = {}
+total_plays = player_play['unique_play'].nunique()
+total_plays_with_motion = player_play[player_play['has_motion'] == True]['unique_play'].nunique()
+total_plays_without_motion = total_plays - total_plays_with_motion
+
+for motion in motion_types:
+    motion_data = player_play[player_play[motion] == True]
+
+    target_plays, rush_plays, decoy_plays, unique_play_sum = count_unique_plays(motion, 'wasTargettedReceiver', 'hadRushAttempt')
+    results[motion] = {
+        'Total unique plays with this motion': motion_data['unique_play'].nunique(),
+        'Plays where motion player was targeted receiver': target_plays,
+        'Plays where motion player was rusher': rush_plays,
+        'Plays where motion player was a decoy': decoy_plays,
+        'Sum of unique plays in all categories (without double-counting)': unique_play_sum
+    }
+
+# Display results for each motion type
+for motion_type, data in results.items():
+    print(f"\nResults for motion type: {motion_type}")
+    for key, value in data.items():
+        print(f"{key}: {value}")
+
+# Display overall totals
+print(f"\nTotal plays in the dataset: {total_plays}")
+print(f"Total plays with motion (all types combined): {total_plays_with_motion}")
+print(f"Total plays without motion: {total_plays_without_motion}")
