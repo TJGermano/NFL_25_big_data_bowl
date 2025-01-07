@@ -16,31 +16,31 @@ To use the scripts in this repository, download the datasets from Kaggle and pla
 ### Step 1: Initial Data Processing
 The first step in the analysis involves processing the raw player_play dataset to identify plays with motion and categorize them by motion type. This is achieved using the scripts/process_motion_data.py script. Below is a summary of the operations performed in this step:
 
-Operations Performed:
+#### Operations Performed:
 
-Load the player_play.csv dataset.
+- Load the player_play.csv dataset.
 
-Generate a unique identifier for each play (gameId + playId).
+- Generate a unique identifier for each play (gameId + playId).
 
-Identify plays with motion based on specific columns (inMotionAtBallSnap, shiftSinceLineset, motionSinceLineset).
+- Identify plays with motion based on specific columns (inMotionAtBallSnap, shiftSinceLineset, motionSinceLineset).
 
-Categorize plays into motion types:
+#### Categorize plays into motion types:
 
-Target: Plays where the motion player was the target receiver.
+- Target: Plays where the motion player was the target receiver.
 
-Rusher: Plays where the motion player had a rushing attempt.
+- Rusher: Plays where the motion player had a rushing attempt.
 
-Decoy: Plays where the player was in motion at the ball snap but was neither a target nor rusher.
+- Decoy: Plays where the player was in motion at the ball snap but was neither a target nor rusher.
 
-Diagnostic: Plays where the player was involved in a shift or motion prior to the ball snap.
+- Diagnostic: Plays where the player was involved in a shift or motion prior to the ball snap.
 
-Deduplicate the dataset to ensure each play is categorized only once.
+- Deduplicate the dataset to ensure each play is categorized only once.
 
-Export two key outputs:
+#### Export two key outputs:
 
-de-dupped-motion-plays.csv: Deduplicated dataset of motion plays categorized by type.
+- de-dupped-motion-plays.csv: Deduplicated dataset of motion plays categorized by type.
 
-motion-players.csv: Full dataset of plays with motion.
+- motion-players.csv: Full dataset of plays with motion.
 
 The full script for this step is located in scripts/process_motion_data.py.
 
