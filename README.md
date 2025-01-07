@@ -12,4 +12,280 @@ The raw data used in this project is sourced from the Kaggle NFL Big Data Bowl. 
 To use the scripts in this repository, download the datasets from Kaggle and place them in the data directory.
 
 ## Scripts
- 
+
+### Step 1: Initial Data Processing
+The first step in the analysis involves processing the raw player_play dataset to identify plays with motion and categorize them by motion type. This is achieved using the scripts/process_motion_data.py script. Below is a summary of the operations performed in this step:
+
+Operations Performed:
+
+Load the player_play.csv dataset.
+
+Generate a unique identifier for each play (gameId + playId).
+
+Identify plays with motion based on specific columns (inMotionAtBallSnap, shiftSinceLineset, motionSinceLineset).
+
+Categorize plays into motion types:
+
+Target: Plays where the motion player was the target receiver.
+
+Rusher: Plays where the motion player had a rushing attempt.
+
+Decoy: Plays where the player was in motion at the ball snap but was neither a target nor rusher.
+
+Diagnostic: Plays where the player was involved in a shift or motion prior to the ball snap.
+
+Deduplicate the dataset to ensure each play is categorized only once.
+
+Export two key outputs:
+
+de-dupped-motion-plays.csv: Deduplicated dataset of motion plays categorized by type.
+
+motion-players.csv: Full dataset of plays with motion.
+
+The full script for this step is located in scripts/process_motion_data.py.
+
+### Step 2: Lead Blocker Analysis
+
+The second step involves analyzing each play to identify potential lead blockers among motion players. This script must be run individually for each week's tracking data. The analysis is performed using the scripts/analyze_lead_blockers.py script.
+
+Operations Performed:
+
+Load weekly tracking data (e.g., tracking_week_9.csv), motion-players.csv, and player_play.csv.
+
+For each play, identify:
+
+The motion player involved.
+
+The ball carrier (if present).
+
+Whether the motion player acts as a lead blocker by staying ahead of the ball carrier within a defined cone and direction tolerance.
+
+Calculate intersections between the motion player's path and the ball carrier's path to detect lead blocker behavior.
+
+Export results to a CSV file summarizing the analysis for the week.
+
+Outputs:
+
+outputs/lead_blocker_analysis_week_X.csv: Contains results for each play, including whether a lead blocker was detected.
+
+Statistics summarizing the percentage of plays with a lead blocker.
+
+Example Usage:
+
+Ensure weekly tracking data (e.g., tracking_week_9.csv) is in the data directory.
+
+Run the analysis script for the desired week:
+
+python scripts/analyze_lead_blockers.py
+
+Review the output in the outputs/ folder.
+
+### Step 3: Merge Lead Blocker Results
+
+The third step involves combining the weekly lead blocker results into a single dataset for comprehensive analysis. This is achieved using the scripts/merge_lead_blocker_results.py script.
+
+Operations Performed:
+
+Read all weekly lead_blocker_analysis_week_X.csv files in the outputs folder.
+
+Concatenate the data into a single DataFrame.
+
+Add a column to track the source file for each row.
+
+Export the merged results to a CSV file.
+
+Outputs:
+
+outputs/merged_lead_blocker_results.csv: Contains the combined results of lead blocker analysis for all weeks.
+
+Example Usage:
+
+Ensure all weekly lead_blocker_analysis_week_X.csv files are in the outputs folder.
+
+Run the merging script:
+
+python scripts/merge_lead_blocker_results.py
+
+Review the combined results in the outputs/merged_lead_blocker_results.csv file.
+
+### Step 4: Merge Lead Blocker and Motion Data
+
+The fourth step merges the lead blocker results with the motion data to create a comprehensive dataset. This is achieved using the scripts/merge_motion_and_lead_blockers.py script.
+
+Operations Performed:
+
+Load the merged lead blocker file (lead_blocker_master.csv).
+
+Load the motion data file (motion-players.csv).
+
+Perform a left merge on gameId, playId, and nflId to associate lead blocker results with motion players.
+
+Handle edge cases where nflId is not available in the lead blocker file:
+
+Ensure only the correct motion player is assigned a lead blocker result.
+
+Filter results based on motion categories (e.g., only "decoy" players can be lead blockers).
+
+Export the merged dataset to a CSV file.
+
+Outputs:
+
+outputs/motion_players_lead_blocker_master_shift.csv: Comprehensive dataset combining motion and lead blocker results.
+
+Example Usage:
+
+Ensure the merged lead blocker file (lead_blocker_master.csv) and motion data file (motion-players.csv) are in the outputs folder.
+
+Run the merging script:
+
+python scripts/merge_motion_and_lead_blockers.py
+
+Review the results in the outputs/motion_players_lead_blocker_master_shift.csv file.
+
+### Step 5: Generate Motion Categories Table
+
+The fifth step generates a single table that integrates all motion categories, including updates for lead blockers detected. This step ensures that each play has a unique identifier and is categorized correctly. This is achieved using the scripts/generate_motion_categories_table.py script.
+
+Operations Performed:
+
+Load the comprehensive merged dataset (motion_players_lead_blocker_master_shift.csv).
+
+Update the motion_category column to "blocker motion" for plays where lead blockers are detected.
+
+Create a unique identifier for each play (gameId + playId).
+
+Filter the dataset to retain only relevant columns (gameId, playId, motion_category, result, unique_play_id).
+
+Export the resulting table to a CSV file.
+
+Outputs:
+
+outputs/motion_data_with_lead_blocker_unique_id.csv: A comprehensive dataset with unique identifiers and updated motion categories.
+
+Example Usage:
+
+Ensure the merged dataset (motion_players_lead_blocker_master_shift.csv) is in the outputs folder.
+
+Run the script to generate the motion categories table:
+
+python scripts/generate_motion_categories_table.py
+
+Review the resulting table in the outputs/motion_data_with_lead_blocker_unique_id.csv file.
+
+### Step 6: Recalculate Using New Motion Categories
+
+The sixth step involves recalculating the dataset to prioritize motion categories and ensure deduplication based on the new motion types. This is achieved using the scripts/recalculate_motion_categories.py script.
+
+Operations Performed:
+
+Load the dataset with unique identifiers (motion_data_with_unique_id.csv).
+
+Assign a priority order to motion categories:
+
+Target: Highest priority.
+
+Rusher.
+
+Blocker.
+
+Decoy.
+
+Diagnostic: Lowest priority.
+
+Sort the data by unique_play_id and priority to determine the highest-priority motion category for each play.
+
+Deduplicate the dataset by keeping only the highest-priority motion category for each unique play.
+
+Export the recalculated dataset to a CSV file.
+
+Outputs:
+
+outputs/deduplicated_motion_data.csv: A recalculated and deduplicated dataset with prioritized motion categories.
+
+Example Usage:
+
+Ensure the dataset with unique identifiers (motion_data_with_unique_id.csv) is in the outputs folder.
+
+Run the recalculation script:
+
+python scripts/recalculate_motion_categories.py
+
+Review the resulting table in the outputs/deduplicated_motion_data.csv file.
+
+### Step 7: Analyze Lead Blocker and Motion Data
+
+The seventh step analyzes the merged lead blocker and motion dataset for trends and insights. This is achieved using the scripts/analyze_motion_and_lead_blockers.py script.
+
+Operations Performed:
+
+Load the comprehensive merged dataset (motion_players_with_lead_blocker_master.csv).
+
+Add a count of motion players for each gameId and playId.
+
+Group data by teamAbbr, motion_category, and motion_player_count.
+
+Calculate counts of plays with and without lead blockers for each group.
+
+Export the summarized results to a CSV file.
+
+Outputs:
+
+Summary of lead blocker and motion trends by team and motion type.
+
+Insights into the impact of motion player counts on lead blocking.
+
+Example Usage:
+
+Ensure the comprehensive merged dataset (motion_players_with_lead_blocker_master.csv) is in the outputs folder.
+
+Run the analysis script:
+
+python scripts/analyze_motion_and_lead_blockers.py
+
+Review the summarized results in the console or export them to a CSV file for further analysis.
+
+### Step 8: Visualization - Motion vs. Non-Motion Plays
+
+The eighth step generates visual insights to compare motion vs. non-motion plays using a pie chart. This is achieved using the scripts/visualize_motion_vs_nonmotion.py script.
+
+Operations Performed:
+
+Load the player_play.csv dataset.
+
+Create a unique identifier for each play (gameId + playId).
+
+Identify plays with motion and categorize them.
+
+Calculate the percentage of motion vs. non-motion plays.
+
+Generate a pie chart visualizing the results.
+
+Outputs:
+
+A pie chart comparing motion and non-motion plays.
+
+Example Usage:
+
+Ensure the player_play.csv dataset is in the data directory.
+
+Run the visualization script:
+
+python scripts/visualize_motion_vs_nonmotion.py
+
+Review the pie chart visualizing motion vs. non-motion plays.
+
+Generated Data
+
+outputs/de-dupped-motion-plays.csv: Contains deduplicated motion play data with the following columns:
+
+unique_play: Unique identifier for each play.
+
+motion_category: Categorized motion type (target, rusher, decoy, diagnostic).
+
+has_motion: Boolean indicating whether the play involved motion.
+
+outputs/motion-players.csv: Contains detailed information on all plays with motion, including raw motion flags and categories.
+
+outputs/lead_blocker_analysis_week_X.csv: Results for weekly lead blocker analysis.
+
+
